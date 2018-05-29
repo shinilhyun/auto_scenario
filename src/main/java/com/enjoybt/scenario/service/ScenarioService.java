@@ -29,7 +29,8 @@ public interface ScenarioService {
      * @param mdlCode the mdl code
      * @return the map
      */
-    public Map<String, Object> makeParams(String gvpCode, String vei, String mdlCode);
+    public Map<String, Object> makeParams(String gvpCode, String vei, String mdlCode)
+            throws Exception;
 
     /**
      * Delay second.

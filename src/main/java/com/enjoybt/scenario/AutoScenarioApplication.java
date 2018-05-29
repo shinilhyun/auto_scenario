@@ -10,7 +10,7 @@ import org.springframework.context.annotation.ImportResource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-//@ImportResource(locations={"classpath:config/tx.xml"})
+@ImportResource(locations={"classpath:config/tx.xml"})
 @Configuration
 @EnableAutoConfiguration(exclude = { DataSourceTransactionManagerAutoConfiguration.class })
 @EnableScheduling

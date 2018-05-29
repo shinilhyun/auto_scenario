@@ -1,11 +1,14 @@
 package com.enjoybt.scenario.service.impl;
 
+import com.enjoybt.common.dao.CommonDAO;
 import com.enjoybt.scenario.service.ScenarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.apache.http.HttpEntity;
@@ -17,7 +20,9 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -26,10 +31,10 @@ import org.springframework.web.client.RestTemplate;
 /**
  * 0. Project  : 화산재해대응시스템
  * 1. Package : com.enjoybt.scenario.service.impl
- * 2. Comment : 
+ * 2. Comment :
  * 3. Auth  : aiden_shin
  * 4. Date  : 2018-05-29 오전 9:50
- * 5. History : 
+ * 5. History :
  * 이름     : 일자          : 근거자료   : 변경내용
  * ------------------------------------------------------
  * aiden_shin : 2018-05-29 :            : 신규 개발.
@@ -38,16 +43,22 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class ScenarioServiceImpl implements ScenarioService {
 
-    private static Logger logger = LoggerFactory.getLogger(ScenarioServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(ScenarioServiceImpl.class);
+
+    @Autowired
+    CommonDAO dao;
 
     @Value("${api.url}")
     String apiUrl;
 
-    @Value("${staging.root}")
+    @Value("${api.staging.root}")
     String stagingRoot;
 
     @Value("${api.endpoint}")
     String endPoint;
+
+    @Value("${path.staging.root}")
+    String stagingRootPath;
 
     // 매일 22시에 실행
     @Scheduled(cron = "0 0 22 * * *")
@@ -56,27 +67,29 @@ public class ScenarioServiceImpl implements ScenarioService {
         String[] gvpList = {"305060", "283110", "283030","282110","306030"};
         String[] veiList = {"4","5","6","7"};
         String mdlCode = "LDS";
-        try {
 
-//            for (String gvp : gvpList) {
-//                for (String vei : veiList) {
+
+//        for (String gvp : gvpList) {
+//            for (String vei : veiList) {
+//
+//                try {
 //                    Map<String, Object> param = makeParams(gvp, vei, mdlCode);
 //                    executeRequest(param);
+//                }catch (Exception e) {
+//                    logger.info("ERROR",e);
 //                }
+//
 //            }
-
-            String gvp = "305060";
-            String vei = "4";
-            Map<String, Object> param = makeParams(gvp, vei, mdlCode);
+//        }
+        try {
+            Map<String, Object> param = makeParams("305060", "4", mdlCode);
             executeRequest(param);
-        } catch (Exception e) {
-
+        }catch (Exception e) {
             logger.info("ERROR",e);
         }
-
     }
 
-    public Map<String, Object> makeParams(String gvpCode, String vei, String mdlCode){
+    public Map<String, Object> makeParams(String gvpCode, String vei, String mdlCode) throws Exception {
         //3초 지연
         delaySecond(3);
 
@@ -122,7 +135,6 @@ public class ScenarioServiceImpl implements ScenarioService {
                 + "_0" + String.valueOf(vei).substring(0,1) + "0_0"+ durationParam
                 + "_0" + obsrParam + "_" + mdlCode;
 
-
         if (gvpCode.equals("283110")) {
             volcanoName = "야사마야마(타루마이)";
             lon = "138.523";
@@ -167,6 +179,10 @@ public class ScenarioServiceImpl implements ScenarioService {
             colum = 10000;
         } else {
             colum = 25000;
+        }
+
+        if(!insertRequest(modelName,mdlCode,gvpCode,obsr,duration,volcanoName)){
+            throw new Exception();
         }
 
         //eruption
@@ -239,6 +255,14 @@ public class ScenarioServiceImpl implements ScenarioService {
         return result;
     }
 
+    public String getEventTime(){
+        Date now = new Date();
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+        String result = df.format(now);
+
+        return result;
+    }
+
     public String getLaterTime(int obsr) {
         Date now = new Date();
         now.setHours(now.getHours() + obsr);
@@ -279,6 +303,31 @@ public class ScenarioServiceImpl implements ScenarioService {
             System.out.println(resJsonObject);
         }
 
+    }
+
+    public boolean insertRequest(String modelName, String mdlCode, String gvp, int obsr, int duration, String volcanoName) throws Exception{
+
+        Map<String, Object> param = new HashMap<>();
+
+        String filePath = stagingRootPath + modelName;
+
+        try {
+            param.put("modelName", modelName);
+            param.put("mdlCode", mdlCode);
+            param.put("gvp", gvp);
+            param.put("obsr", obsr);
+            param.put("duration", duration);
+            param.put("eventTime", Timestamp.valueOf(getEventTime()));
+            param.put("file_path", filePath);
+            param.put("volcanoName", volcanoName);
+
+            dao.insert("auto.insertRequest", param);
+
+        }catch (Exception e) {
+            logger.error("insertRequest error!");
+            return false;
+        }
+        return true;
     }
 }
 
