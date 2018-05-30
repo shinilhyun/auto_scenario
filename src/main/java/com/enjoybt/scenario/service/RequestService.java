@@ -14,7 +14,7 @@ import java.util.Map;
  * aiden_shin : 2018-05-29 :            : 신규 개발.
  *
  */
-public interface ScenarioService {
+public interface RequestService {
 
     /**
      * 유사시나리오 생성 실행

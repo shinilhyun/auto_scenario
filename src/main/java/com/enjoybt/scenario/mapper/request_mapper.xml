@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN" "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+
+<mapper namespace="request">
+    <insert id="insertRequest" parameterType="java.util.Map">
+        WITH UPSERT AS (
+            UPDATE TB_AUTO_SCENARIO A
+            SET
+                AUTO_SENARO_ID = #{modelName},
+                MDL_CODE = #{mdlCode},
+                GVP = #{gvp},
+                VEI = #{vei},
+                OBSERVE = #{obsr},
+                DURATION = #{duration},
+                EVENT_TIME = #{eventTime},
+                FILE_PATH = #{file_path},
+                VOLCANO_NAME = #{volcanoName},
+                REG_TIME = now()
+            WHERE
+                AUTO_SENARO_ID = #{modelName}
+            RETURNING A.*
+        )
+        INSERT INTO TB_AUTO_SCENARIO
+            (AUTO_SENARO_ID, MDL_CODE, GVP, VEI, OBSERVE, DURATION, EVENT_TIME, FILE_PATH, VOLCANO_NAME)
+        SELECT
+            #{modelName}, #{mdlCode}, #{gvp}, #{vei}, #{obsr}, #{duration}, #{eventTime}, #{file_path}, #{volcanoName}
+        WHERE
+            #{modelName} NOT IN (
+                SELECT AUTO_SENARO_ID FROM UPSERT
+            )
+    </insert>
+
+
+</mapper>
+ 

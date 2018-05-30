@@ -1,7 +1,7 @@
 package com.enjoybt.scenario.service.impl;
 
 import com.enjoybt.common.dao.CommonDAO;
-import com.enjoybt.scenario.service.ScenarioService;
+import com.enjoybt.scenario.service.RequestService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.sql.Timestamp;
@@ -22,11 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 /**
  * 0. Project  : 화산재해대응시스템
@@ -41,9 +39,9 @@ import org.springframework.web.client.RestTemplate;
  *
  */
 @Service
-public class ScenarioServiceImpl implements ScenarioService {
+public class RequestServiceImpl implements RequestService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ScenarioServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(RequestServiceImpl.class);
 
     @Autowired
     CommonDAO dao;
@@ -62,6 +60,7 @@ public class ScenarioServiceImpl implements ScenarioService {
 
     // 매일 22시에 실행
     @Scheduled(cron = "0 0 22 * * *")
+    @Override
     public void requestScenario(){
 
         String[] gvpList = {"305060", "283110", "283030","282110","306030"};
@@ -89,6 +88,7 @@ public class ScenarioServiceImpl implements ScenarioService {
         }
     }
 
+    @Override
     public Map<String, Object> makeParams(String gvpCode, String vei, String mdlCode) throws Exception {
         //3초 지연
         delaySecond(3);
@@ -181,7 +181,7 @@ public class ScenarioServiceImpl implements ScenarioService {
             colum = 25000;
         }
 
-        if(!insertRequest(modelName,mdlCode,gvpCode,obsr,duration,volcanoName)){
+        if(!insertRequest(modelName,mdlCode,gvpCode,obsr,duration,volcanoName,vei)){
             throw new Exception();
         }
 
@@ -245,8 +245,9 @@ public class ScenarioServiceImpl implements ScenarioService {
         }
     }
 
+    @Override
     public String getStartTime(){
-
+        //utc
         //2018-01-29T17:00:00Z
         Date now = new Date();
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'00:00:00'Z'");
@@ -256,14 +257,17 @@ public class ScenarioServiceImpl implements ScenarioService {
     }
 
     public String getEventTime(){
+        //kst
         Date now = new Date();
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd 09:00:00");
         String result = df.format(now);
 
         return result;
     }
 
+    @Override
     public String getLaterTime(int obsr) {
+        //utc
         Date now = new Date();
         now.setHours(now.getHours() + obsr);
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'00:00:00'Z'");
@@ -272,6 +276,7 @@ public class ScenarioServiceImpl implements ScenarioService {
         return result;
     }
 
+    @Override
     public void executeRequest(Map<String,Object> param) throws Exception {
         CloseableHttpClient client = HttpClientBuilder.create().build();
 
@@ -305,7 +310,8 @@ public class ScenarioServiceImpl implements ScenarioService {
 
     }
 
-    public boolean insertRequest(String modelName, String mdlCode, String gvp, int obsr, int duration, String volcanoName) throws Exception{
+    public boolean insertRequest(String modelName, String mdlCode, String gvp, int obsr,
+            int duration, String volcanoName, String vei) throws Exception{
 
         Map<String, Object> param = new HashMap<>();
 
@@ -316,12 +322,13 @@ public class ScenarioServiceImpl implements ScenarioService {
             param.put("mdlCode", mdlCode);
             param.put("gvp", gvp);
             param.put("obsr", obsr);
+            param.put("vei", Float.parseFloat(vei));
             param.put("duration", duration);
             param.put("eventTime", Timestamp.valueOf(getEventTime()));
             param.put("file_path", filePath);
             param.put("volcanoName", volcanoName);
 
-            dao.insert("auto.insertRequest", param);
+            dao.insert("request.insertRequest", param);
 
         }catch (Exception e) {
             logger.error("insertRequest error!");

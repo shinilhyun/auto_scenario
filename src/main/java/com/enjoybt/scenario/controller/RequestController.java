@@ -1,6 +1,6 @@
 package com.enjoybt.scenario.controller;
 
-import com.enjoybt.scenario.service.ScenarioService;
+import com.enjoybt.scenario.service.RequestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,12 +23,12 @@ import org.springframework.web.servlet.ModelAndView;
  *
  */
 @Controller
-public class HomeController {
+public class RequestController {
 
-    private static Logger logger = LoggerFactory.getLogger(HomeController.class);
+    private static Logger logger = LoggerFactory.getLogger(RequestController.class);
 
     @Autowired
-    ScenarioService scenarioService;
+    RequestService requestService;
 
     @RequestMapping(value = "/")
     public String home(){
@@ -49,6 +49,6 @@ public class HomeController {
     public void run(){
         logger.info("run");
 
-        scenarioService.requestScenario();
+        requestService.requestScenario();
     }
 }
